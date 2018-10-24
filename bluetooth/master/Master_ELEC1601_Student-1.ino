@@ -4,7 +4,7 @@
 #define DEBUG_ENABLED 1
 
 String retSymb = "+RTINQ=";    // start symble when there's any return
-String slaveName = ";Slave3";  // caution that ';'must be included, and make sure the slave name is right.
+String slaveName = ";SlaveABC";  // caution that ';'must be included, and make sure the slave name is right.
 int nameIndex = 0;
 int addrIndex = 0;
 
@@ -69,7 +69,7 @@ void setupBlueToothConnection()
     blueToothSerial.begin(38400);               // Set BluetoothBee BaudRate to default baud rate 38400
     blueToothSerial.print("\r\n+STWMOD=1\r\n"); // set the bluetooth work in master mode
 
-    blueToothSerial.print("\r\n+STNA=Master3\r\n"); // set the bluetooth name as
+    blueToothSerial.print("\r\n+STNA=MasterABC\r\n"); // set the bluetooth name as
 
     blueToothSerial.print("\r\n+STAUTO=0\r\n"); // Auto-connection is forbidden here
     delay(2000);                                // This delay is required.
@@ -104,7 +104,7 @@ void setupBlueToothConnection()
 
             {
 
-                //Serial.print(recvBuf);
+                Serial.print(recvBuf);
 
                 addrIndex = (recvBuf.indexOf(retSymb, (nameIndex - retSymb.length() - 18)) + retSymb.length()); //get the start position of slave address
 

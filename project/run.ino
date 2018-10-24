@@ -1,16 +1,23 @@
 #include <Servo.h>
 #include <SoftwareSerial.h>
+
 Servo servoLeft, servoRight;
 
 int val = 0;
 int tempSensor = A1;
 int lightSensor = A0;
 
-int irRightLED = 9;
-int irRightReceive = 10;
-int irLeftLED = 2;
-int irLeftReceive = 3;
+unsigned long lastmove = 0;
 
+// 0:stright 1:turn left 2:turn right
+int inprocess = 0;
+
+#define irRightLED 9
+#define irRightReceive 10
+#define irLeftLED 2
+#define irLeftReceive 3
+
+#define delaytime 1200
 #define RxD 7
 #define TxD 6
 
@@ -18,11 +25,18 @@ int irLeftReceive = 3;
 
 SoftwareSerial blueToothSerial(RxD,TxD);
 
+struct state{
+  int irLeft;
+  int irRight;
+  int light;
+  double temp;
+};
+
 void setupBlueToothConnection()
 {
     blueToothSerial.begin(38400);                           // Set BluetoothBee BaudRate to default baud rate 38400
     blueToothSerial.print("\r\n+STWMOD=0\r\n");             // set the bluetooth work in slave mode
-    blueToothSerial.print("\r\n+STNA=Slave3+\r\n");    // set the bluetooth name as "SeeedBTSlave"
+    blueToothSerial.print("\r\n+STNA=SlaveABC+\r\n");    // set the bluetooth name as "SeeedBTSlave"
     blueToothSerial.print("\r\n+STOAUT=1\r\n");             // Permit Paired device to connect me
     blueToothSerial.print("\r\n+STAUTO=0\r\n");             // Auto-connection should be forbidden here
     delay(2000);                                            // This delay is required.
@@ -31,7 +45,6 @@ void setupBlueToothConnection()
     delay(2000);                                            // This delay is required.
 
     blueToothSerial.flush();
-
 }
 
 void setup()
@@ -75,51 +88,65 @@ void output()
   Serial.println(c); // Print the value of Temp
 }
 
-void loop()
-{
-
-  int irRight = irDetect(9, 10, 38000);
-  Serial.print(irRight);
-  //Serial.print(' ');
-
-  int irLeft = irDetect(2, 3, 38000);
-  //Serial.println(irLeft);
-  delay(100);
-
-  if (irLeft == 0 || irRight == 0)
+void control(struct state s){
+  //if(inprocess != 0 && millis() - lastmove <= delaytime)
+  //  return;
+  int left = s.irLeft;
+  int right = s.irRight;
+  if (left == 0 || right == 0)
   {
-    tone(4, 3000, 1000);
-    servoLeft.writeMicroseconds(1700);
-    servoRight.writeMicroseconds(1300);
-    delay(1000);
+    lastmove = millis();
 
-    if (irLeft == 0)
+    //go back 
+    //servoLeft.writeMicroseconds(1700);
+    //servoRight.writeMicroseconds(1300);
+    if (left == 0)//turn left
     {
       servoLeft.writeMicroseconds(1500);
       servoRight.writeMicroseconds(1300);
-      delay(1200);
+      inprocess = 1;
     }
-    else if (irRight == 0)
+    else if (right == 0)//turn right
     {
       servoLeft.writeMicroseconds(1700);
       servoRight.writeMicroseconds(1500);
-      delay(1200);
+      inprocess = 2;
     }
   }
   else
   {
+    inprocess = 0;
+    //go stright
     servoLeft.writeMicroseconds(1300);
     servoRight.writeMicroseconds(1700);
   }
-  delay(50);
+}
 
-  val = analogRead(lightSensor); // Light Sensor
-  //Serial.print(val);
-  //Serial.print(' ');
+struct state sense(){
+  struct state c;
+  c.irLeft = irDetect(irLeftLED, irLeftReceive, 38000);
+  c.irRight = irDetect(irRightLED, irRightReceive, 38000);
 
-  //output();
+  int val = analogRead(tempSensor);             // Pin of Temp Sensor using
+  double tempv = val * 5000.0 / 1024.0; // Convert the unit of Temp
+  c.temp = (tempv - 750) / 10 + 25;
+  c.light = analogRead(lightSensor);
+  return c;
+}
 
-  blueToothSerial.print(irRight);
+void senddata(struct state c){
+  blueToothSerial.print(inprocess);
   blueToothSerial.print(' ');
-  blueToothSerial.println(irLeft);
+  blueToothSerial.print(c.light);
+  blueToothSerial.print(' ');
+  blueToothSerial.print(c.temp);
+  blueToothSerial.println('@');
+}
+
+void loop()
+{
+  struct state c = sense();
+  control(c);
+  senddata(c);
+  delay(100);
 }
