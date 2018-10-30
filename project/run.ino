@@ -22,7 +22,7 @@ int inprocess = 0;
 #define irLeftLED 2
 #define irLeftReceive 3
 
-#define delaytime 700
+#define delaytime 1200
 #define RxD 7
 #define TxD 6
 
@@ -142,16 +142,18 @@ void control(struct state s){
   {
     lastmove = millis();
 
-    //go back 
+    turn(0);
+    delay(400);
+    //go back
     //servoLeft.writeMicroseconds(1700);
     //servoRight.writeMicroseconds(1300);
-    if (left == 0)//turn right
-    {
-      turn(2);
-    }
-    else if (right == 0)//turn left
+    if (right == 0)//turn right
     {
       turn(1);
+    }
+    else if (left == 0)//turn left
+    {
+      turn(2);
     }
   }
   else //go straight
@@ -166,9 +168,14 @@ struct state sense(){
   c.irLeft = irDetect(irLeftLED, irLeftReceive, 38000);
   c.irRight = irDetect(irRightLED, irRightReceive, 38000);
 
-  int val = analogRead(tempSensor);             // Pin of Temp Sensor using
+/*
+  Serial.print(c.irLeft);
+  Serial.print(' ');
+  Serial.println(c.irRight);
+  */
+  int val = analogRead(tempSensor);     // Pin of Temp Sensor using
   double tempv = val * 5000.0 / 1024.0; // Convert the unit of Temp
-  c.temp = (tempv - 750) / 10 + 25;
+  c.temp = (tempv - 750) / 10 + 25 - 290;
   c.light = analogRead(lightSensor);
   return c;
 }
@@ -183,7 +190,7 @@ void senddata(struct state c){
   blueToothSerial.println('@');
 }
 
-void recvdata(){
+char recvdata(){
   //receive data via bluetooth
   char recvChar = 255;
   if (blueToothSerial.available())
@@ -202,7 +209,7 @@ void loop()
 
   //get data to see if there is command
   char recvChar = recvdata();
-  if (recvChar != 255)
+  if (recvChar == 0 || recvChar == 1 || recvChar == 2 || recvChar == 3)
   {
     turn(recvChar);
   }

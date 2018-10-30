@@ -8,7 +8,7 @@ port_number (define which port used)
 '''
 
 import tkinter
-from tkinter import Tk, Canvas, Frame, BOTH, Text, END
+from tkinter import Tk, Canvas, Frame, BOTH, Text, END, Button
 #import tkFont
 import serial
 import threading
@@ -16,10 +16,29 @@ import time
 import math
 
 
+#before all functions because key events used it
+bluetooth = serial.Serial("com12",9600,timeout=0)
+
 def d2r(degree):
     #turn degree to rotation
     return degree / 180 * math.pi
 
+
+def leftArrow(event):
+    print("Left Arrow")
+    print(bluetooth.write(b'\x01'))
+
+def rightArrow(event):
+    print("Right Arrow")
+    bluetooth.write(b'\x02')
+
+def upArrow(event):
+    print("Up Arrow")
+    bluetooth.write(b'\x00')
+
+def downArrow(event):
+    print("Down Arrow")
+    bluetooth.write(b'\x03')
 
 class Draw(Frame):
     '''
@@ -35,7 +54,7 @@ class Draw(Frame):
         self.pack(fill=BOTH, expand=1)
 
         #some basic setting
-        self.nowx = 200
+        self.nowx = 600
         self.nowy = 545
         self.direction = 270
         self.interval = 0.1
@@ -52,6 +71,18 @@ class Draw(Frame):
         self.lightext = self.canvas.create_text(800,150,text="Light:",font=("Times", "24"))
 
         self.canvas.pack(fill=BOTH, expand=1)
+        '''
+        self.left = Button(self.canvas,text='left',font=("","16"))
+        self.right = Button(self.canvas,text='right',font=("","16"))
+        self.left.pack(side="top", expand=False, anchor='w',padx=4, pady=4)
+        self.right.pack(side="top", expand=False, anchor='w',padx=4, pady=4)
+        '''
+
+        #bind events
+        root.bind('<Left>',leftArrow)
+        root.bind('<Right>',rightArrow)
+        root.bind('<Up>',upArrow)
+        root.bind('<Down>',downArrow)
 
     def newPosition(self, deltax, deltay, color='blue'):
         # paint new position for the rebot
@@ -122,7 +153,7 @@ class Draw(Frame):
         if info == None:
             return
 
-        #print(info) for debug
+        print(info)
         direction = info['direction']
         (dx, dy) = self.move(direction)
         color = Draw.rendercolor(info['light'], info['temp'])
@@ -134,22 +165,27 @@ class Draw(Frame):
 def loop(ser, mydraw):
     #This thread communicates via bluetooth
     while ser.isOpen():
+        bluetooth.flush()
+        time.sleep(0.02)
+        if (bluetooth.out_waiting > 0):
+            print("ready to write")
+        else:
+            time.sleep(0.02)
         if (ser.in_waiting > 0):
             buffer = ser.read(ser.in_waiting)
             mydraw.recvinfor(buffer)
-        elif (ser.in_waiting <= 0):
+        else:
             time.sleep(0.02)
 
 
 def main():
     #setup
-#    bluetooth = serial.Serial("com11",9600,timeout=0)
     root = Tk()
     ex = Draw(root)
 
     #start a thread to use bluetooth async
-#    thread = threading.Thread(target=loop,args=(bluetooth,ex,))
-#    thread.start()
+    thread = threading.Thread(target=loop,args=(bluetooth,ex,))
+    thread.start()
 
     #start gui
     root.geometry("1000x600+300+100")
