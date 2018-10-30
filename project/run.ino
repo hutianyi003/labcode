@@ -28,6 +28,12 @@ int inprocess = 0;
 
 #define DEBUG_ENABLED 1
 
+#define STRAIGHT 0
+#define LEFT 1
+#define RIGHT 2
+#define STOP 3
+#define BACK 4
+
 SoftwareSerial blueToothSerial(RxD,TxD);
 
 //save rebot state
@@ -95,13 +101,44 @@ void output()
   Serial.println(c); // Print the value of Temp
 }
 
+void turn(int direction){
+  //control the Servo to turn 
+  //0 -> stright
+  //1 -> left
+  //2 -> right
+  //3 -> stop
+  inprocess = direction;
+  switch (direction)
+  {
+    //go back 
+    //servoLeft.writeMicroseconds(1700);
+    //servoRight.writeMicroseconds(1300);
+    case STRAIGHT:
+      servoLeft.writeMicroseconds(1300);
+      servoRight.writeMicroseconds(1700);
+      break;
+    case LEFT:
+      servoLeft.writeMicroseconds(1700);
+      servoRight.writeMicroseconds(1500);
+      break;
+    case RIGHT:
+      servoLeft.writeMicroseconds(1500);
+      servoRight.writeMicroseconds(1300);
+      break;
+    case STOP:
+      servoLeft.writeMicroseconds(1500);
+      servoRight.writeMicroseconds(1500);
+  }
+}
+
 void control(struct state s){
   //control the robot to turn according to IR results
-  if(inprocess != 0 && millis() - lastmove <= delaytime)
-    return;
+  if(inprocess != 0 && millis() - lastmove <= delaytime)// if not turn 90 degree yet
+    return; // continue turn until 90 degree
+
   int left = s.irLeft;
   int right = s.irRight;
-  if (left == 0 || right == 0)
+  if (left == 0 || right == 0)// should turn 
   {
     lastmove = millis();
 
@@ -110,23 +147,16 @@ void control(struct state s){
     //servoRight.writeMicroseconds(1300);
     if (left == 0)//turn right
     {
-      servoLeft.writeMicroseconds(1500);
-      servoRight.writeMicroseconds(1300);
-      inprocess = 1;
+      turn(2);
     }
     else if (right == 0)//turn left
     {
-      servoLeft.writeMicroseconds(1700);
-      servoRight.writeMicroseconds(1500);
-      inprocess = 2;
+      turn(1);
     }
   }
-  else
+  else //go straight
   {
-    inprocess = 0;
-    //go stright
-    servoLeft.writeMicroseconds(1300);
-    servoRight.writeMicroseconds(1700);
+    turn(0);
   }
 }
 
@@ -153,11 +183,29 @@ void senddata(struct state c){
   blueToothSerial.println('@');
 }
 
+void recvdata(){
+  //receive data via bluetooth
+  char recvChar = 255;
+  if (blueToothSerial.available())
+  {
+    recvChar = blueToothSerial.read();
+  }
+  return recvChar;
+}
+
 void loop()
 {
   //main loop
   struct state c = sense();//get state
   control(c);//control turning
   senddata(c);//send data
-  delay(100);//100 ms interval
+
+  //get data to see if there is command
+  char recvChar = recvdata();
+  if (recvChar != 255)
+  {
+    turn(recvChar);
+  }
+
+  delay(100); //100 ms interval
 }

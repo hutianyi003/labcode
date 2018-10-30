@@ -38,21 +38,23 @@ class Draw(Frame):
             50, 440, 60, 450, fill="blue", width=0)
         self.infobuffer = ''
 
+        #some basic setting
         self.nowx = 55
         self.nowy = 445
         self.direction = 270
         self.interval = 0.1
         self.degree_per_second = 90 / 1.160
         self.basespeed = 2
+        self.currentspeed = 0
 
         self.canvas.pack(fill=BOTH, expand=1)
 
     def newPosition(self, deltax, deltay, color='blue'):
-        #print("clicked at", event.x, event.y)
+        # paint new position for the rebot
         cor = self.canvas.coords(self.currentcar)
         x0 = (cor[0] + cor[2])/2
         y0 = (cor[1] + cor[3])/2
-        step = 5
+        step = 5 # how many points between the previous position
         for i in range(step):
             dx = (deltax / step) * (i + 1)
             dy = (deltay / step) * (i + 1)
@@ -63,6 +65,7 @@ class Draw(Frame):
 
     @staticmethod
     def rendercolor(light, temp):
+        #change the function to get different color
         return 'blue'
 
     def parser(self, data):
@@ -77,31 +80,45 @@ class Draw(Frame):
 
     def move(self, direction):
         degree = self.degree_per_second * self.interval
+
+        #check if is turning
         if direction == 0:
             degree = 0
-        elif direction == 1:
+        elif direction == 2:
             degree = -degree
+
+        #check whether stop or not
+        if direction == 3:
+            self.currentspeed = 0
+        else:
+            self.currentspeed = self.basespeed
         
         self.direction = (self.direction + degree) % 360
-        dx = math.cos(d2r(self.direction)) * self.basespeed
-        dy = math.sin(d2r(self.direction)) * self.basespeed
+        dx = math.cos(d2r(self.direction)) * self.currentspeed
+        dy = math.sin(d2r(self.direction)) * self.currentspeed
+
+        # return deltax and deltay
         if direction != 0:
             return (0,0)
         else:
             return (dx, dy)
 
     def recvinfor(self, data):
-        self.infobuffer += data.decode('utf8')
+        self.infobuffer += data.decode('utf8',errors='ignore')
         buf = self.infobuffer
         newlinepos = buf.find('@\r\n')
+
+        #if there is not a complete message, then return
         if newlinepos == -1:
             return
+
         onemessage = buf[:newlinepos]
         self.infobuffer = buf[newlinepos+1:]
-        info = self.parser(onemessage)
+        info = self.parser(onemessage)#parse one message
         if info == None:
             return
-        print(info)
+
+        #print(info) for debug
         direction = info['direction']
         (dx, dy) = self.move(direction)
         color = Draw.rendercolor(info['light'], info['temp'])
@@ -113,7 +130,6 @@ def loop(ser, mydraw):
     while ser.isOpen():
         if (ser.in_waiting > 0):
             buffer = ser.read(ser.in_waiting)
-            #print(buffer)
             mydraw.recvinfor(buffer)
         elif (ser.in_waiting <= 0):
             time.sleep(0.02)
