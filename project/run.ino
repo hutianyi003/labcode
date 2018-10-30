@@ -1,3 +1,8 @@
+/* This file controls the robot
+* Communication : Bluetooth
+* Auto turning : IR
+*/
+
 #include <Servo.h>
 #include <SoftwareSerial.h>
 
@@ -17,7 +22,7 @@ int inprocess = 0;
 #define irLeftLED 2
 #define irLeftReceive 3
 
-#define delaytime 1200
+#define delaytime 700
 #define RxD 7
 #define TxD 6
 
@@ -25,6 +30,7 @@ int inprocess = 0;
 
 SoftwareSerial blueToothSerial(RxD,TxD);
 
+//save rebot state
 struct state{
   int irLeft;
   int irRight;
@@ -34,6 +40,7 @@ struct state{
 
 void setupBlueToothConnection()
 {
+    //setup BlueTooth use name SlaveABC
     blueToothSerial.begin(38400);                           // Set BluetoothBee BaudRate to default baud rate 38400
     blueToothSerial.print("\r\n+STWMOD=0\r\n");             // set the bluetooth work in slave mode
     blueToothSerial.print("\r\n+STNA=SlaveABC+\r\n");    // set the bluetooth name as "SeeedBTSlave"
@@ -49,10 +56,8 @@ void setupBlueToothConnection()
 
 void setup()
 {
-
+  //setup serial
   Serial.begin(9600);
-  tone(4, 3000, 10000);
-  delay(1000);
 
   //IR setup
   pinMode(irRightLED, OUTPUT); // IR Sensor
@@ -72,6 +77,7 @@ void setup()
 
 int irDetect(int irLedPin, int irReceiverPin, long frequency)
 {
+  //dectect whether there is obstacle
   tone(irLedPin, frequency, 8);
   delay(1);
   int ir = digitalRead(irReceiverPin);
@@ -81,7 +87,8 @@ int irDetect(int irLedPin, int irReceiverPin, long frequency)
 
 void output()
 {
-
+  //just for debug
+  //not used
   int val = analogRead(tempSensor);             // Pin of Temp Sensor using
   double tempv = val * 5000.0 / 1024.0; // Convert the unit of Temp
   double c = (tempv - 750) / 10 + 25;
@@ -89,8 +96,9 @@ void output()
 }
 
 void control(struct state s){
-  //if(inprocess != 0 && millis() - lastmove <= delaytime)
-  //  return;
+  //control the robot to turn according to IR results
+  if(inprocess != 0 && millis() - lastmove <= delaytime)
+    return;
   int left = s.irLeft;
   int right = s.irRight;
   if (left == 0 || right == 0)
@@ -100,13 +108,13 @@ void control(struct state s){
     //go back 
     //servoLeft.writeMicroseconds(1700);
     //servoRight.writeMicroseconds(1300);
-    if (left == 0)//turn left
+    if (left == 0)//turn right
     {
       servoLeft.writeMicroseconds(1500);
       servoRight.writeMicroseconds(1300);
       inprocess = 1;
     }
-    else if (right == 0)//turn right
+    else if (right == 0)//turn left
     {
       servoLeft.writeMicroseconds(1700);
       servoRight.writeMicroseconds(1500);
@@ -123,6 +131,7 @@ void control(struct state s){
 }
 
 struct state sense(){
+  //use sensors to get temprature and lightness
   struct state c;
   c.irLeft = irDetect(irLeftLED, irLeftReceive, 38000);
   c.irRight = irDetect(irRightLED, irRightReceive, 38000);
@@ -135,6 +144,7 @@ struct state sense(){
 }
 
 void senddata(struct state c){
+  //send data via bluetooth
   blueToothSerial.print(inprocess);
   blueToothSerial.print(' ');
   blueToothSerial.print(c.light);
@@ -145,8 +155,9 @@ void senddata(struct state c){
 
 void loop()
 {
-  struct state c = sense();
-  control(c);
-  senddata(c);
-  delay(100);
+  //main loop
+  struct state c = sense();//get state
+  control(c);//control turning
+  senddata(c);//send data
+  delay(100);//100 ms interval
 }

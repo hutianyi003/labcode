@@ -1,7 +1,14 @@
-#!/usr/bin/python3
-# -- coding: utf8 --
+'''
+This file uses tkinter to draw path of our rebot, while communicating via bluetooth.
 
-from tkinter import Tk, Canvas, Frame, BOTH
+There are some constants very import, including:
+basespeed (define the drawing speed)
+degree_per_second (define the turning speed)
+port_number (define which port used)
+'''
+
+import tkinter
+from tkinter import Tk, Canvas, Frame, BOTH, Text, END
 import serial
 import threading
 import time
@@ -9,19 +16,21 @@ import math
 
 
 def d2r(degree):
+    #turn degree to rotation
     return degree / 180 * math.pi
 
 
 class Draw(Frame):
-
-    def __init__(self):
+    '''
+    Draw class for tkinter
+    '''
+    def __init__(self,root):
         super().__init__()
 
-        self.initUI()
+        self.initUI(root)
 
-    def initUI(self):
-
-        self.master.title("Lines")
+    def initUI(self,root):
+        self.master.title("Auto Detected Robot")
         self.pack(fill=BOTH, expand=1)
 
         self.canvas = Canvas(self)
@@ -36,7 +45,6 @@ class Draw(Frame):
         self.degree_per_second = 90 / 1.160
         self.basespeed = 2
 
-        #self.canvas.bind("<Button-1>", self.newPosition)
         self.canvas.pack(fill=BOTH, expand=1)
 
     def newPosition(self, deltax, deltay, color='blue'):
@@ -96,12 +104,12 @@ class Draw(Frame):
         print(info)
         direction = info['direction']
         (dx, dy) = self.move(direction)
-        print(dx,dy)
         color = Draw.rendercolor(info['light'], info['temp'])
         self.newPosition(dx, dy, color)
 
 
 def loop(ser, mydraw):
+    #This thread communicates via bluetooth
     while ser.isOpen():
         if (ser.in_waiting > 0):
             buffer = ser.read(ser.in_waiting)
@@ -112,17 +120,18 @@ def loop(ser, mydraw):
 
 
 def main():
-
-    root = Tk()
-
+    #setup
     bluetooth = serial.Serial("com11",9600,timeout=0)
+    root = Tk()
+    ex = Draw(root)
 
-    ex = Draw()
+    #start a thread to use bluetooth async
     thread = threading.Thread(target=loop,args=(bluetooth,ex,))
     thread.start()
+
+    #start gui
     root.geometry("800x500+300+100")
     root.mainloop()
-
 
 if __name__ == '__main__':
     main()
