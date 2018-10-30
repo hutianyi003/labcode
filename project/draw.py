@@ -9,6 +9,7 @@ port_number (define which port used)
 
 import tkinter
 from tkinter import Tk, Canvas, Frame, BOTH, Text, END
+#import tkFont
 import serial
 import threading
 import time
@@ -33,19 +34,22 @@ class Draw(Frame):
         self.master.title("Auto Detected Robot")
         self.pack(fill=BOTH, expand=1)
 
-        self.canvas = Canvas(self)
-        self.currentcar = self.canvas.create_oval(
-            50, 440, 60, 450, fill="blue", width=0)
-        self.infobuffer = ''
-
         #some basic setting
-        self.nowx = 55
-        self.nowy = 445
+        self.nowx = 200
+        self.nowy = 545
         self.direction = 270
         self.interval = 0.1
         self.degree_per_second = 90 / 1.160
         self.basespeed = 2
         self.currentspeed = 0
+        self.infobuffer = ''
+
+        #setup canvas
+        self.canvas = Canvas(self)
+        self.currentcar = self.canvas.create_oval(
+            self.nowx-5, self.nowy-5, self.nowx+5, self.nowy+5, fill="blue", width=0)
+        self.temptext = self.canvas.create_text(800,100,text="Temp:",font=("Times", "24"))
+        self.lightext = self.canvas.create_text(800,150,text="Light:",font=("Times", "24"))
 
         self.canvas.pack(fill=BOTH, expand=1)
 
@@ -122,6 +126,8 @@ class Draw(Frame):
         direction = info['direction']
         (dx, dy) = self.move(direction)
         color = Draw.rendercolor(info['light'], info['temp'])
+        self.canvas.itemconfig(self.temptext,text='Temp: {}'.format(info['temp']))
+        self.canvas.itemconfig(self.lightext,text='Light: {}'.format(info['light']))
         self.newPosition(dx, dy, color)
 
 
@@ -137,16 +143,16 @@ def loop(ser, mydraw):
 
 def main():
     #setup
-    bluetooth = serial.Serial("com11",9600,timeout=0)
+#    bluetooth = serial.Serial("com11",9600,timeout=0)
     root = Tk()
     ex = Draw(root)
 
     #start a thread to use bluetooth async
-    thread = threading.Thread(target=loop,args=(bluetooth,ex,))
-    thread.start()
+#    thread = threading.Thread(target=loop,args=(bluetooth,ex,))
+#    thread.start()
 
     #start gui
-    root.geometry("800x500+300+100")
+    root.geometry("1000x600+300+100")
     root.mainloop()
 
 if __name__ == '__main__':
