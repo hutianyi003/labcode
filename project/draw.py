@@ -157,7 +157,7 @@ class Draw(Frame):
         direction = info['direction']
         (dx, dy) = self.move(direction)
         color = Draw.rendercolor(info['light'], info['temp'])
-        self.canvas.itemconfig(self.temptext,text='Temp: {}'.format(info['temp']))
+        self.canvas.itemconfig(self.temptext,text='Temp: {} °C'.format(info['temp']))
         self.canvas.itemconfig(self.lightext,text='Light: {}'.format(info['light']))
         self.newPosition(dx, dy, color)
 

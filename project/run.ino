@@ -196,6 +196,7 @@ char recvdata(){
   if (blueToothSerial.available())
   {
     recvChar = blueToothSerial.read();
+    Serial.print(recvChar);
   }
   return recvChar;
 }
@@ -205,7 +206,6 @@ void loop()
   //main loop
   struct state c = sense();//get state
   control(c);//control turning
-  senddata(c);//send data
 
   //get data to see if there is command
   char recvChar = recvdata();
@@ -214,5 +214,6 @@ void loop()
     turn(recvChar);
   }
 
+  senddata(c);//send data
   delay(100); //100 ms interval
 }

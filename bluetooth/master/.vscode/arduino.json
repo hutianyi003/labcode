@@ -1,5 +1,0 @@
-{
-    "board": "arduino:avr:uno",
-    "port": "COM12",
-    "sketch": "Master_ELEC1601_Student-1.ino"
-}
